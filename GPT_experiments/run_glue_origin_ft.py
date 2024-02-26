@@ -69,8 +69,6 @@ task_to_keys = {
 
 logger = logging.getLogger(__name__)
 
-# For wandb
-# os.environ["WANDB_PROJECT"]="LoRA_Linear_Algebra_v02"
 
 @dataclass
 class DataTrainingArguments:
@@ -238,7 +236,7 @@ class ModelArguments:
     lora_alpha: float = field(default=16, metadata={"help": "The alpah of lora coefficient, usually it's twice of the rank."})
     lora_dropout: float = field(default=0.05)
     lora_svd_method: Optional[str] = field(
-        default=None, metadata={"help": "The strategy of LoRA_SVD, ['UEV', 'UE', 'EV', 'E'] and etc."}
+        default=None, metadata={"help": "The strategy of LoRASYM"}
     )
 
 
@@ -276,20 +274,15 @@ def main():
         datefmt="%m/%d/%Y %H:%M:%S",
         handlers=[logging.StreamHandler(sys.stdout)],
     )
-
-    """
-    Initialize wandb here, the ciritcal thing is to add group name
-    """
     
     if model_args.ft_method == "LoRA":
         lora_svd_method = ""
-    elif model_args.ft_method == "LoRA_SVD":
+    elif model_args.ft_method == "LoRASYM":
         lora_svd_method = model_args.lora_svd_method
     else:
         lora_svd_method = ""
     
     run = wandb.init(
-        # project=os.environ["WANDB_PROJECT"],
         project = f"glue_{data_args.task_name}",
         group=f"{model_args.ft_method}_{lora_svd_method}_r_{model_args.lora_rank}", # Need to modify here
         tags=[model_args.ft_method, model_args.lora_svd_method],
@@ -461,9 +454,7 @@ def main():
         ignore_mismatched_sizes=model_args.ignore_mismatched_sizes,
     )
     
-    """
-    lq-lora's run_glue don't have this part
-    """
+
     if tokenizer.pad_token is None:
         tokenizer.add_special_tokens({"pad_token": "[PAD]"})
         model.resize_token_embeddings(len(tokenizer))
@@ -603,8 +594,6 @@ def main():
 
 
     from local_lora_configs import load_peft_model_test, print_trainable_parameters, load_peft_model_test_2
-    from peft import get_peft_model
-    from peft import LoraConfig
     
     if model_args.ft_method in ["LoRA", "LoRASYM"]:
         print("Using low-rank finetuning, ft_method =", model_args.ft_method)
@@ -636,9 +625,6 @@ def main():
             checkpoint = training_args.resume_from_checkpoint
         elif last_checkpoint is not None:
             checkpoint = last_checkpoint
-        
-        print("During training, check the trainable parameters")
-        print_trainable_parameters(model)
         
         train_result = trainer.train(resume_from_checkpoint=checkpoint)
         metrics = train_result.metrics
