@@ -601,14 +601,12 @@ def main():
     else:
         data_collator = None
 
-    """
-    lq-lora add lora to model here 
-    """
+
     from local_lora_configs import load_peft_model_test, print_trainable_parameters, load_peft_model_test_2
     from peft import get_peft_model
     from peft import LoraConfig
     
-    if model_args.ft_method in ["LoRA", "LoRA_SVD"]:
+    if model_args.ft_method in ["LoRA", "LoRASYM"]:
         print("Using low-rank finetuning, ft_method =", model_args.ft_method)
         model = load_peft_model_test(model, method=model_args.ft_method, strategy=model_args.lora_svd_method, 
                                      model_cofig=model_args, 
@@ -654,10 +652,6 @@ def main():
         trainer.log_metrics("train", metrics)
         trainer.save_metrics("train", metrics)
         trainer.save_state()
-        
-        """
-        They added a save the full model here
-        """
 
     # Evaluation
     if training_args.do_eval:
@@ -703,9 +697,6 @@ def main():
 
         for predict_dataset, task in zip(predict_datasets, tasks):
             # Removing the `label` columns because it contains -1 and Trainer won't like that.
-            
-            print("predict_dataset =", predict_dataset)
-            print("task =", task)
             
             predict_dataset = predict_dataset.remove_columns("label")
             predictions = trainer.predict(predict_dataset, metric_key_prefix="predict").predictions

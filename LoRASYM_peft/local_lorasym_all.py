@@ -38,16 +38,6 @@ from peft.import_utils import is_bnb_4bit_available, is_bnb_available
 
 if is_bnb_available():
     import bitsandbytes as bnb
-    
-# class PeftType(str, Enum):
-#     PROMPT_TUNING = "PROMPT_TUNING"
-#     P_TUNING = "P_TUNING"
-#     PREFIX_TUNING = "PREFIX_TUNING"
-#     LORA = "LORA"
-#     ADALORA = "ADALORA"
-#     ADAPTION_PROMPT = "ADAPTION_PROMPT"
-#     IA3 = "IA3"
-#     LORA_SVD = "LORA_SVD"
 
 
 class TaskType(str, Enum):
@@ -135,8 +125,8 @@ class LoRASYMConfig(PeftConfig):
     # Note: need to update, change the default
     update_rule: dict = field(default_factory=lambda:{"update_A": True, "update_B": True, "update_E":True,
                                                       "random_init_A": False, "random_init_B": False,
-                                                      "A_init":"V", "B_init":"U", "E_init":"E",
-                                                      "use_E": True},
+                                                      "A_init":"V", "B_init":"U", "E_init":"I",
+                                                      "use_E": False},
                               metadata={"help": "The dict object that controls whether to update each components of the" 
                                         "low-rank adapters."})
 
@@ -144,11 +134,7 @@ class LoRASYMConfig(PeftConfig):
         self.peft_type = "LORASYM" 
         
  
-"""
-******************************
-The self-defined Layer
-"""       
-class LoraSVDLayer(BaseTunerLayer):
+class LoRASYMLayer(BaseTunerLayer):
     def __init__(self, in_features: int, out_features: int, name: str, config: dict, **kwargs):
         self.r = {}
         self.lora_alpha = {}
@@ -156,7 +142,7 @@ class LoraSVDLayer(BaseTunerLayer):
         self.lora_dropout = nn.ModuleDict({})
         self.lora_A = nn.ModuleDict({})
         self.lora_B = nn.ModuleDict({})
-        self.lora_E = nn.ModuleDict({})  # Adding new stuff
+        self.lora_E = nn.ModuleDict({}) 
         # For Embedding layer
         self.lora_embedding_A = nn.ParameterDict({})
         self.lora_embedding_B = nn.ParameterDict({})
@@ -207,67 +193,10 @@ class LoraSVDLayer(BaseTunerLayer):
             self.reset_lora_parameters(adapter_name)
         self.to(self.weight.device)
 
-    """
-    Not used yet
-    """
-    # def update_layer_conv2d(self, adapter_name, r, lora_alpha, lora_dropout, init_lora_weights):
-    #     self.r[adapter_name] = r
-    #     self.lora_alpha[adapter_name] = lora_alpha
-    #     if lora_dropout > 0.0:
-    #         lora_dropout_layer = nn.Dropout(p=lora_dropout)
-    #     else:
-    #         lora_dropout_layer = nn.Identity()
-
-    #     self.lora_dropout.update(nn.ModuleDict({adapter_name: lora_dropout_layer}))
-    #     # Actual trainable parameters
-    #     if r > 0:
-    #         kernel_size = self.kwargs["kernel_size"]
-    #         stride = self.kwargs["stride"]
-    #         padding = self.kwargs["padding"]
-    #         self.lora_A.update(
-    #             nn.ModuleDict({adapter_name: nn.Conv2d(self.in_features, r, kernel_size, stride, padding, bias=False)})
-    #         )
-    #         self.lora_B.update(
-    #             nn.ModuleDict({adapter_name: nn.Conv2d(r, self.out_features, (1, 1), (1, 1), bias=False)})
-    #         )
-    #         self.scaling[adapter_name] = lora_alpha / r
-    #     if init_lora_weights:
-    #         self.reset_lora_parameters(adapter_name)
-    #     self.to(self.weight.device)
-
-    """
-    Not used yet?
-    """
-    # def update_layer_embedding(self, adapter_name, r, lora_alpha, lora_dropout, init_lora_weights):
-    #     self.r[adapter_name] = r
-    #     self.lora_alpha[adapter_name] = lora_alpha
-    #     if lora_dropout > 0.0:
-    #         lora_dropout_layer = nn.Dropout(p=lora_dropout)
-    #     else:
-    #         lora_dropout_layer = nn.Identity()
-
-    #     self.lora_dropout.update(nn.ModuleDict({adapter_name: lora_dropout_layer}))
-    #     # Actual trainable parameters
-    #     if r > 0:
-    #         weight_A = torch.randn((r, self.in_features), dtype=self.weight.dtype, device=self.weight.device)
-    #         weight_B = torch.randn((self.out_features, r), dtype=self.weight.dtype, device=self.weight.device)
-    #         self.lora_embedding_A.update(nn.ParameterDict({adapter_name: nn.Parameter(weight_A)}))
-    #         self.lora_embedding_B.update(nn.ParameterDict({adapter_name: nn.Parameter(weight_B)}))
-    #         self.scaling[adapter_name] = lora_alpha / r
-    #     if init_lora_weights:
-    #         self.reset_lora_parameters(adapter_name)
-    #     self.to(self.weight.device)
 
     def reset_lora_parameters(self, adapter_name):
         if adapter_name in self.lora_A.keys():
-            # initialize A the same way as the default for nn.Linear and B to zero
-            # nn.init.kaiming_uniform_(self.lora_A[adapter_name].weight, a=math.sqrt(5))
-            # nn.init.zeros_(self.lora_B[adapter_name].weight)
-            
-            # Do something novel here
             with torch.no_grad():    
-                
-                # key_list = self.config.update_rule.keys():
                 
                 if self.config.update_rule["A_init"] == "V":
                     self.lora_A[adapter_name].weight.copy_(self.V_init[:, : self.r[adapter_name]].T)
@@ -277,7 +206,7 @@ class LoraSVDLayer(BaseTunerLayer):
                     self.lora_A[adapter_name].weight.copy_(self.V_rand[:, : self.r[adapter_name]].T)
                 elif self.config.update_rule["A_init"] == "he":
                     nn.init.kaiming_uniform_(self.lora_A[adapter_name].weight, a=math.sqrt(5))
-                    # self.lora_A[adapter_name].weight.copy_(self.V_rand[:, : self.r[adapter_name]].T)
+                   
                 elif self.config.update_rule["A_init"] == "zero":
                     nn.init.zeros_(self.lora_A[adapter_name].weight)
                 
@@ -451,7 +380,7 @@ class LoRASYMModel(BaseTuner):
             kwargs["gptq_quantization_config"] = quantization_config
 
         # NOTICE, no need to worry about cnn for now
-        if isinstance(target, LoraSVDLayer) and isinstance(target, torch.nn.Conv2d):
+        if isinstance(target, LoRASYMLayer) and isinstance(target, torch.nn.Conv2d):
             target.update_layer_conv2d(
                 adapter_name,
                 lora_config.r,
@@ -460,7 +389,7 @@ class LoRASYMModel(BaseTuner):
                 lora_config.init_lora_weights,
             )
         
-        elif isinstance(target, LoraSVDLayer) and isinstance(target, torch.nn.Embedding):
+        elif isinstance(target, LoRASYMLayer) and isinstance(target, torch.nn.Embedding):
             target.update_layer_embedding(
                 adapter_name,
                 lora_config.r,
@@ -469,7 +398,7 @@ class LoRASYMModel(BaseTuner):
                 lora_config.init_lora_weights,
             )
 
-        elif isinstance(target, LoraSVDLayer):
+        elif isinstance(target, LoRASYMLayer):
             target.update_layer(
                 adapter_name,
                 lora_config.r,
@@ -552,7 +481,7 @@ class LoRASYMModel(BaseTuner):
                     p.requires_grad = True
         elif bias == "lora_only":
             for m in self.model.modules():
-                if isinstance(m, LoraSVDLayer) and hasattr(m, "bias") and m.bias is not None:
+                if isinstance(m, LoRASYMLayer) and hasattr(m, "bias") and m.bias is not None:
                     m.bias.requires_grad = True
         else:
             raise NotImplementedError
@@ -680,7 +609,7 @@ class LoRASYMModel(BaseTuner):
     def _get_active_adapter(self) -> str:
         active_adapter = None
         for module in self.model.modules():
-            if isinstance(module, LoraSVDLayer):
+            if isinstance(module, LoRASYMLayer):
                 active_adapter = module.active_adapter
 
         if active_adapter is None:
@@ -996,7 +925,7 @@ class LoRASYMModel(BaseTuner):
 #  ------------------------------------------------------------------------------------------
 
 
-class Linear(nn.Linear, LoraSVDLayer):
+class Linear(nn.Linear, LoRASYMLayer):
     # Lora implemented in a dense layer
     def __init__(
         self,
@@ -1016,7 +945,7 @@ class Linear(nn.Linear, LoraSVDLayer):
 
         nn.Linear.__init__(self, in_features, out_features, **kwargs)
         # LoraLayer.__init__(self, in_features=in_features, out_features=out_features)
-        LoraSVDLayer.__init__(self, in_features=in_features, out_features=out_features, 
+        LoRASYMLayer.__init__(self, in_features=in_features, out_features=out_features, 
                               name=name, config=config, **kwargs)
         
         # Freezing the pre-trained weight matrix
@@ -1030,13 +959,11 @@ class Linear(nn.Linear, LoraSVDLayer):
 
         nn.Linear.reset_parameters(self)
         
-        # print("init_lora_weights =", init_lora_weights)
         self.update_layer(adapter_name, r, lora_alpha, lora_dropout, init_lora_weights)
         self.active_adapter = adapter_name
         self.is_target_conv_1d_layer = is_target_conv_1d_layer
         
         # Notice: Change the requires_grad here? 
-        # print("config.update_rule =", config.update_rule)
         if not config.update_rule["update_A"]:
             self.lora_A.requires_grad = False
         

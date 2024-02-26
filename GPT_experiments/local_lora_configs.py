@@ -26,10 +26,9 @@ from pathlib import Path
 upper_dir = Path(__file__).parents[1]
 # print("upper_dir =", upper_dir)
 sys.path.append(str(upper_dir))
-from LoRASVD_peft.local_lora_svd_all import LoraSVDConfig, LoraSVDModel
-from LoRASVD_peft.local_peft_model_all import PeftModel_local, PeftModelForSequenceClassification_local,\
-                                              PeftModelForCausalLM_local, \
-                                                  PeftModelForCausalLM_local_old
+from LoRASYM_peft.local_lorasym_all import LoRASYMConfig, LoRASYMModel
+from LoRASYM_peft.local_peft_model_all import PeftModel_local, PeftModelForSequenceClassification_local,\
+                                              PeftModelForCausalLM_local, 
 
 
 def print_trainable_parameters(model):
@@ -46,10 +45,6 @@ def print_trainable_parameters(model):
 TASKTYPE_TO_PEFTMODEL = {"CAUSAL_LM": PeftModelForCausalLM_local,
                          "SEQ_CLS": PeftModelForSequenceClassification_local}
 
-TASKTYPE_TO_PEFTMODEL_old = {"CAUSAL_LM": PeftModelForCausalLM_local_old,
-                         "SEQ_CLS": PeftModelForSequenceClassification_local}
-
-
 def strategy_to_rule_dict(update_A=True, update_B=True, update_E=True,
                   A_init="V", B_init="U", E_init="E", use_E=True):
         
@@ -60,57 +55,6 @@ def strategy_to_rule_dict(update_A=True, update_B=True, update_E=True,
         
         return para_dict
 
-
-STRATEGY_TO_RULE = {
-                    "our_LoRA": strategy_to_rule_dict(update_E=False, use_E=False,
-                                                           A_init="he", B_init="zero"),
-                    
-                    "hB_U_A_V": strategy_to_rule_dict(update_E=False, use_E=False,
-                                                  update_A=False,
-                                                  A_init="V", B_init="U"),
-                    "hBU_Arand": strategy_to_rule_dict(update_E=False, use_E=False,
-                                                  update_A=False,
-                                                  A_init="rand", B_init="U"),
-                    "hBU_Ahe": strategy_to_rule_dict(update_E=False, use_E=False,
-                                                  update_A=False,
-                                                  A_init="he", B_init="U"),
-                    "hB0_AV": strategy_to_rule_dict(update_E=False, use_E=False,
-                                                  update_A=False,
-                                                  A_init="V", B_init="zero"),
-                    "hB0_Arand": strategy_to_rule_dict(update_E=False, use_E=False,
-                                                  update_A=False,
-                                                  A_init="rand", B_init="zero"),
-                    "B0_he": strategy_to_rule_dict(update_E=False, use_E=False,
-                                                  update_A=False,
-                                                  A_init="he", B_init="zero"),
-                    
-                    "Brand_V": strategy_to_rule_dict(update_E=False, use_E=False,
-                                                  update_A=False,
-                                                  A_init="V", B_init="rand"),
-                    "Brand_rand": strategy_to_rule_dict(update_E=False, use_E=False,
-                                                  update_A=False,
-                                                  A_init="rand", B_init="rand"),
-                    
-                    
-                    "randArand": strategy_to_rule_dict(update_E=False, use_E=False,
-                                                  update_B=False,
-                                                  A_init="rand", B_init="rand"),
-                    "randArand_new": strategy_to_rule_dict(update_E=False, use_E=False,
-                                                  update_B=False,
-                                                  A_init="rand", B_init="rand"),
-                    "randAzero": strategy_to_rule_dict(update_E=False, use_E=False,
-                                                  update_B=False,
-                                                  A_init="zero", B_init="rand"),
-                    "UAzero": strategy_to_rule_dict(update_E=False, use_E=False,
-                                                  update_B=False,
-                                                  A_init="zero", B_init="U"),
-                    "heAzero": strategy_to_rule_dict(update_E=False, use_E=False,
-                                                  update_B=False,
-                                                  A_init="zero", B_init="he"),
-                    "heAhe": strategy_to_rule_dict(update_E=False, use_E=False,
-                                                  update_B=False,
-                                                  A_init="he", B_init="he"),
-                    }
 
 def STRATEGY_TO_RULE_func(strategy_str):
     command_list = strategy_str.split("_")
@@ -134,33 +78,25 @@ def load_peft_model_test(model, method, strategy, model_cofig, task_type_input="
     if task_type_input not in ["CAUSAL_LM", "SEQ_CLS"]:
         print("task_type_input must be in ['CAUSAL_LM', 'SEQ_CLS']")
     
-    if method == "LoRA_SVD":
+    if method == "LoRASYM":
         
-        # if strategy not in STRATEGY_TO_RULE.keys():
-        #     print("Must choose from ", STRATEGY_TO_RULE.keys())
-        
-        print("Using LoRA_SVD")
+        print("Using LoRASYM")
         print("model is ", type(model))
         print("strategy =", strategy)
-        # print("STRATEGY_TO_RULE[strategy] =", STRATEGY_TO_RULE[strategy])
         
         update_rule_dict = STRATEGY_TO_RULE_func(strategy)
         print("update_rule_dict =", update_rule_dict)
         
-        lora_svd_config = LoraSVDConfig(
+        lora_svd_config = LoRASYMConfig(
                 r=model_cofig.lora_rank,    # default is 8
                 lora_alpha=model_cofig.lora_alpha,
                 lora_dropout=0.05,
                 bias="none",
                 modules_to_save=["classifier"],
-                # update_rule=STRATEGY_TO_RULE[strategy],
                 update_rule=update_rule_dict,
                 task_type=task_type_input,
                 )
         lora_model = TASKTYPE_TO_PEFTMODEL[task_type_input](model, lora_svd_config)
-        
-        print("For investigating the saving method")
-        print("lora_model =", lora_model)
         
         lora_model.print_trainable_parameters()
         
@@ -225,29 +161,3 @@ def load_peft_model_test_2(model, method, strategy, model_cofig, task_type_input
         lora_model.print_trainable_parameters()
     
     return peft_model
-
-"""
-# "UEV": strategy_to_rule_dict(), # 
-                    
-# "UE": strategy_to_rule_dict(update_A=False),
-
-# "EV": strategy_to_rule_dict(update_B=False),
-
-# "UEV_rand": strategy_to_rule_dict(A_init="rand", B_init="rand") , 
-
-# "UE_rand": strategy_to_rule_dict(update_A=False, A_init="rand", B_init="rand"),
-    
-# "EV_rand": strategy_to_rule_dict(update_B=False, A_init="rand", B_init="rand"),
-
-# "UE_last": strategy_to_rule_dict(update_A=False, A_init="last"),
-
-# "UEi": strategy_to_rule_dict(update_A=False, update_E=False), 
-
-# "UEiV": strategy_to_rule_dict(update_E=False),
-    
-# "UEi_rand": strategy_to_rule_dict(update_A=False, update_E=False,
-#                                        A_init="rand", B_init="rand"), 
-
-# "UEiV_rand": strategy_to_rule_dict(update_E=False,
-#                                        A_init="rand", B_init="rand"),
-"""

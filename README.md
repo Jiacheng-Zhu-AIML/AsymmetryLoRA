@@ -1,8 +1,8 @@
 # Asymmetry in Low-Rank Adapters of Foundation Models
 
-<!-- 🌟 [ArXiv Preprint](https://arxiv.org/)  -->
+🌟 [ArXiv Preprint](https://arxiv.org/) 
 
-his repo hosts the code for the paper "Asymmetry in Low-Rank Adapters of Foundation Models". We discover and analysis the asymmetry of the LoRA adapter matrices `B` and `A`,  
+This repo hosts the code for the paper "Asymmetry in Low-Rank Adapters of Foundation Models". We discover and analysis the asymmetry of the LoRA adapter matrices `B` and `A`,  
 
 ## 🔗 Quick Links
 - [Asymmetry in Low-Rank Adapters of Foundation Models](#asymmetry-in-low-rank-adapters-of-foundation-models)
@@ -74,11 +74,29 @@ lora_model = PeftModelForCausalLM_local(model, lorasym_config)
 ```
 ## GLUE benchmark
 
-TODO
+Use the following command to fine-tune RoBERTa-large model for tasks in the GLUE benchmark. 
+```
+cd GPT_experiments
 
-## Evaluation and analysis
+python -m run_glue_origin_ft --model_name_or_path roberta-large \
+    --task_name rte \
+    --ft_method LoRASYM \
+    --bf16 True \
+    --tf32 True \
+    --do_train \
+    --do_eval \
+    --learning_rate 4e-4 \
+    --num_train_epochs 20 \
+    --input_seed 7 \
+    --lora_svd_method A_rand_hB_zero \
+    --lora_rank 8 \
+    --lora_alpha 16 \
+    --overwrite_output_dir 
+```
 
-TODO
+<!-- ## Evaluation and analysis
+
+TODO -->
 
 ## Bugs or Questions?
 If you have any questions related to the code or the paper, feel free to email Jiacheng Zhu (zjc@mit.edu). 
