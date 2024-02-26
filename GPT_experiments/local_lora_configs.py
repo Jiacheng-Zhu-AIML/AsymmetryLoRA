@@ -28,7 +28,7 @@ upper_dir = Path(__file__).parents[1]
 sys.path.append(str(upper_dir))
 from LoRASYM_peft.local_lorasym_all import LoRASYMConfig, LoRASYMModel
 from LoRASYM_peft.local_peft_model_all import PeftModel_local, PeftModelForSequenceClassification_local,\
-                                              PeftModelForCausalLM_local, 
+                                              PeftModelForCausalLM_local 
 
 
 def print_trainable_parameters(model):
