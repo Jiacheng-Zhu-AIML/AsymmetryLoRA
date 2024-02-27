@@ -1,6 +1,6 @@
 # Asymmetry in Low-Rank Adapters of Foundation Models
 
-🌟 [ArXiv Preprint](https://arxiv.org/) 
+🌟 [ArXiv Preprint](https://arxiv.org/abs/2402.16842) 
 
 This repo hosts the code for the paper "Asymmetry in Low-Rank Adapters of Foundation Models". We discover and analysis the asymmetry of the LoRA adapter matrices `B` and `A`,  
 
@@ -102,5 +102,13 @@ TODO -->
 If you have any questions related to the code or the paper, feel free to email Jiacheng Zhu (zjc@mit.edu). 
 Please feel free to open an issue if you encounter any problems when using the code.
 
-<!-- ## Citation
-Please cite our paper if you find the repo helpful in your work: -->
+## Citation
+Please cite our paper if you find the repo helpful in your work:
+
+```bibtex
+@article{zhu2024asymmetry,
+      title={Asymmetry in Low-Rank Adapters of Foundation Models}, 
+      author={Jiacheng Zhu and Kristjan Greenewald and Kimia Nadjahi and Haitz Sáez de Ocáriz Borde and Rickard Brüel Gabrielsson and Leshem Choshen and Marzyeh Ghassemi and Mikhail Yurochkin and Justin Solomon},
+      year={2024},
+}
+```
